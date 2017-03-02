@@ -13,7 +13,13 @@ dataset = np.loadtxt('pima-indians-diabetes.csv', delimiter=',')
 x = dataset[:, 0:8]
 y = dataset[:, 8]
 
-# create model 
+# create model: Sequential Model
+# make sure first layer has right number of inputs: specified by input_dim (should be same value as input variables)
+# Dense Class: Fully connected layers
+# Dense(numberOfNeuronsInLayer, initializationMethod, activationFunction)
+# uniform initialization: small random number generated from uniform distribution (b/w 0-.05)
+# normal initialization: small random numbers from Gaussian distribution
+# activation functions = rectifier (relu).. good performance and sigmoid [output b/w 0 and 1]
 model = Sequential()
 model.add(Dense(12, input_dim=8, init='uniform', activation='relu'))
 model.add(Dense(8, init='uniform', activation='relu'))
