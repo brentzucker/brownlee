@@ -1,4 +1,5 @@
 # Chapter 5
+# Understand your data with Descriptive Statistics
 import pandas
 url = "https://goo.gl/vhm1eU"
 names = ['preg', 'plas', 'pres', 'skin', 'test', 'mass', 'pedi', 'age', 'class']
