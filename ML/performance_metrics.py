@@ -81,7 +81,7 @@ print("MSE: %.3f (%.3f)") % (results.mean(), results.std())
 
 ### R^2 (R Squared): 0 means good fit, 1 means bad fit
 scoring = 'r2'
-results = cross_validation_cross_val_score(model, X, Y, cv=kfold, scoring=scoring)
+results = cross_validation.cross_val_score(model, X, Y, cv=kfold, scoring=scoring)
 print("R^2: %.3f (%.3f)") % (results.mean(), results.std())
 
 
