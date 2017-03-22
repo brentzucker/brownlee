@@ -13,6 +13,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.pipeline import Pipeline
 from sklearn.grid_search import GridSearchCV
 from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
@@ -58,7 +59,7 @@ dataset.plot(kind='density', subplots=True, layout=(8,8), sharex=False, legend=F
 # plt.show()
 
 ### box and whisker plots
-dataset.plot(kind='box', subplots=True, layout=(8,8), sharex=False, sharey=False, fontsize=1)
+#dataset.plot(kind='box', subplots=True, layout=(8,8), sharex=False, sharey=False, fontsize=1)
 # plt.show()
 
 ## Multimodal Data Visualizations
@@ -103,10 +104,111 @@ for name, model in models:
     msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
     print(msg)
 
-# Visual Comparison of Algorithms 
+## Visual Comparison of Algorithms
 fig = plt.figure()
 fig.suptitle('Algorithm Comparison')
 ax = fig.add_subplot(111)
 plt.boxplot(results)
 ax.set_xticklabels(names)
-plt.show()
+# plt.show()
+
+# 6. Evaluate Algorithms: Standardize Data
+pipelines = []
+pipelines.append(('ScaledLR', Pipeline([('Scaler', StandardScaler()),('LR', LogisticRegression())])))
+pipelines.append(('ScaledLDA', Pipeline([('Scaler', StandardScaler()),('LDA', LinearDiscriminantAnalysis())])))
+pipelines.append(('ScaledKNN', Pipeline([('Scaler', StandardScaler()),('KNN', KNeighborsClassifier())])))
+pipelines.append(('ScaledCART', Pipeline([('Scaler', StandardScaler()),('CART', DecisionTreeClassifier())])))
+pipelines.append(('ScaledNB', Pipeline([('Scaler', StandardScaler()),('NB', GaussianNB())])))
+pipelines.append(('ScaledSVM', Pipeline([('Scaler', StandardScaler()),('SVM', SVC())])))
+results = []
+names = []
+for name, model in pipelines:
+  kfold = cross_validation.KFold(n=num_instances, n_folds=num_folds, random_state=seed)
+  cv_results = cross_validation.cross_val_score(model, X_train, Y_train, cv=kfold, scoring=scoring)
+  results.append(cv_results)
+  names.append(name)
+  msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
+  print(msg)
+
+## Visual Comparison of Algorithms
+fig = plt.figure()
+fig.suptitle('Scaled Algorithm Comparison')
+ax = fig.add_subplot(111)
+plt.boxplot(results)
+ax.set_xticklabels(names)
+# plt.show()
+
+# 7. Algorithm Tuning
+## Tune KNN and SVM
+
+## Tune KNN: Number of Neighbors
+scaler = StandardScaler().fit(X_train)
+rescaledX = scaler.transform(X_train)
+neighbors = [1,3,5,7,9,11,13,15,17,19,21]
+param_grid = dict(n_neighbors=neighbors)
+model = KNeighborsClassifier()
+kfold = cross_validation.KFold(n=num_instances, n_folds=num_folds, random_state=seed)
+grid = GridSearchCV(estimator=model, param_grid=param_grid, scoring=scoring, cv=kfold)
+grid_result = grid.fit(rescaledX, Y_train)
+print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+for params, mean_score, scores in grid_result.grid_scores_:
+    print("%f (%f) with: %r" % (scores.mean(), scores.std(), params))
+
+## Tuning SVM
+### Tune the Value of C (how much to relax the margin) (default is 1.0)
+### Type of Kernel (default is Radial Base Function RBF)
+
+scaler = StandardScaler().fit(X_train)
+rescaledX = scaler.transform(X_train)
+c_values = [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.3, 1.5, 1.7, 2.0]
+kernel_values = ['linear', 'poly', 'rbf', 'sigmoid']
+param_grid = dict(C=c_values, kernel=kernel_values)
+model = SVC()
+kfold = cross_validation.KFold(n=num_instances, n_folds=num_folds, random_state=seed)
+grid = GridSearchCV(estimator=model, param_grid=param_grid, scoring=scoring, cv=kfold)
+grid_result = grid.fit(rescaledX, Y_train)
+print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+for params, mean_score, scores in grid_result.grid_scores_:
+    print("%f (%f) with: %r" % (scores.mean(), scores.std(), params))
+
+# 8. Ensemble Methods
+
+ensembles = []
+ensembles.append(('AB', AdaBoostClassifier()))
+ensembles.append(('GBM', GradientBoostingClassifier()))
+ensembles.append(('RF', RandomForestClassifier()))
+ensembles.append(('ET', ExtraTreesClassifier()))
+results = []
+names = []
+for name, model in ensembles:
+  kfold = cross_validation.KFold(n=num_instances, n_folds=num_folds, random_state=seed)
+  cv_results = cross_validation.cross_val_score(model, X_train, Y_train, cv=kfold,
+      scoring=scoring)
+  results.append(cv_results)
+  names.append(name)
+  msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
+  print(msg)
+
+## Visual Comparison of Ensemble Algorithms
+fig = plt.figure()
+fig.suptitle('Ensemble Algorithm Comparison')
+ax = fig.add_subplot(111)
+plt.boxplot(results)
+ax.set_xticklabels(names)
+# plt.show()
+
+# 9. Finalize Model
+
+## SVM showed most promise
+### prepare the model with whole training set
+scaler = StandardScaler().fit(X_train)
+rescaledX = scaler.transform(X_train)
+model = SVC(C=1.5)
+model.fit(rescaledX, Y_train)
+
+### estimate accuracy on validation dataset
+rescaledValidationX = scaler.transform(X_validation)
+predictions = model.predict(rescaledValidationX)
+print(accuracy_score(Y_validation, predictions))
+print(confusion_matrix(Y_validation, predictions))
+print(classification_report(Y_validation, predictions))
